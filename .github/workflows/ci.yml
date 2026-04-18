@@ -1,0 +1,65 @@
+name: CI/CD
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Check syntax
+        run: python -m py_compile main.py && echo "Build successful"
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest test_main.py -v
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: echo "Tests passed. Deploying branch ${{ github.ref_name }}..."
+
+# Real deploy examples (commented). Replace the deploy job steps above, or add steps.
+# Set secrets in GitHub: Repo Settings -> Secrets and variables -> Actions (never commit them).
+#
+# Example 1: Docker build and push (needs Dockerfile in repo root).
+# Secrets: DOCKER_USERNAME, DOCKER_PASSWORD, and e.g. IMAGE_NAME as a variable.
+#   - uses: docker/setup-buildx-action@v3
+#   - uses: docker/login-action@v3
+#     with:
+#       username: ${{ secrets.DOCKER_USERNAME }}
+#       password: ${{ secrets.DOCKER_PASSWORD }}
+#   - uses: docker/build-push-action@v6
+#     with:
+#       context: .
+#       push: true
+#       tags: ${{ vars.IMAGE_NAME }}:${{ github.sha }}
+#
+# Example 2: Static site to AWS S3 + CloudFront (needs ./dist from a prior build step).
+# Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY. Vars: S3_BUCKET, CLOUDFRONT_ID.
+#   - uses: aws-actions/configure-aws-credentials@v4
+#     with:
+#       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#       aws-region: ap-southeast-2
+#   - run: pip install awscli
+#   - run: aws s3 sync ./dist s3://${{ vars.S3_BUCKET }}/ --delete
+#   - run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --paths "/*"
