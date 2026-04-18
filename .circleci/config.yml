@@ -1,84 +1,50 @@
 version: 2.1
 
-# Reusable executor (the machine that runs our jobs)
-executors:
-  python-executor:
-    docker:
-      - image: cimg/python:3.11   # CircleCI's official Python image
-    working_directory: ~/project
-
 jobs:
 
-  # Install dependencies and cache them
-  install:
-    executor: python-executor
+  build:
+    docker:
+      - image: cimg/python:3.11
     steps:
-      - checkout                          # pull code from GitHub
-      - restore_cache:                    # reuse cached packages if available
-          keys:
-            - deps-{{ checksum "requirements.txt" }}
+      - checkout
       - run:
           name: Install dependencies
           command: pip install -r requirements.txt
-      - save_cache:                       # cache for next run
-          key: deps-{{ checksum "requirements.txt" }}
-          paths:
-            - ~/.local
+      - run:
+          name: Check syntax
+          command: python -m py_compile main.py && echo "Build successful"
 
-  # Run the test suite with coverage
   test:
-    executor: python-executor
+    docker:
+      - image: cimg/python:3.11
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "requirements.txt" }}
       - run:
           name: Install dependencies
           command: pip install -r requirements.txt
       - run:
-          name: Run tests with coverage
-          command: |
-            pytest test_main.py \
-              --tb=short \
-              --cov=main \
-              --cov-report=term-missing \
-              --cov-report=xml:coverage.xml \
-              -v
-      - store_test_results:              # shows test results in CircleCI UI
-          path: test-results
-      - store_artifacts:                 # makes coverage.xml downloadable in UI
-          path: coverage.xml
-          destination: coverage-report
+          name: Run tests
+          command: pytest test_main.py -v
 
-  # Simulated deploy step (runs only on the main branch)
   deploy:
-    executor: python-executor
+    docker:
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
-          name: Simulate deployment
-          command: |
-            echo "--------------------------------------------"
-            echo " All tests passed on branch: $CIRCLE_BRANCH"
-            echo " Deploying commit: $CIRCLE_SHA1"
-            echo " Triggered by:     $CIRCLE_USERNAME"
-            echo "--------------------------------------------"
-            echo " Deployment complete! (simulated)"
+          name: Deploy
+          command: echo "Tests passed. Deploying branch $CIRCLE_BRANCH..."
 
-# Workflow - wires the jobs together
 workflows:
   ci_cd_pipeline:
     jobs:
-      - install
-
+      - build
       - test:
           requires:
-            - install          # test only runs after install succeeds
-
+            - build
       - deploy:
           requires:
-            - test             # deploy only runs after tests pass
+            - test
           filters:
             branches:
-              only: main       # deploy step runs on main branch only
+              only: main
