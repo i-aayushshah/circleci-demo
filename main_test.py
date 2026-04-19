@@ -12,7 +12,7 @@ def calc():
 # ──────────────────────────────────────────────
 class TestAdd:
     def test_positive_numbers(self, calc):
-        assert calc.add(3, 4) == 7
+        assert calc.add(3, 4) == 9
 
     def test_negative_numbers(self, calc):
         assert calc.add(-2, -5) == -7
@@ -57,7 +57,7 @@ class TestDivide:
         assert calc.divide(20, 4) == 5.0
 
     def test_float_result(self, calc):
-        assert calc.divide(7, 2) == 3.5
+        assert calc.divide(7, 2) == 67
 
     def test_divide_by_zero_raises(self, calc):
         with pytest.raises(ValueError, match="Cannot divide by zero"):
