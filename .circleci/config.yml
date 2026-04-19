@@ -1,26 +1,86 @@
-version: 2.1  # circleci version
+version: 2.1
 
 jobs:
+
   build:
-    working_directory: ~/circleci-demo
     docker:
-      - image: cimg/python:3.11.5
+      - image: cimg/python:3.11
     steps:
       - checkout
-      - run: python3 main.py
+      - run:
+          name: Install dependencies
+          command: pip install -r requirements.txt
+      - run:
+          name: Check syntax
+          command: python -m py_compile main.py && echo "Build successful"
 
   test:
-    working_directory: ~/circleci-demo
     docker:
-      - image: cimg/python:3.11.5
+      - image: cimg/python:3.11
     steps:
       - checkout
-      - run: python3 main_test.py
+      - run:
+          name: Install dependencies
+          command: pip install -r requirements.txt
+      - run:
+          name: Run tests
+          command: pytest test_main.py -v
+
+  deploy:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - checkout
+      - run:
+          name: Deploy
+          command: echo "Tests passed. Deploying branch $CIRCLE_BRANCH..."
+
+  # Real deploy examples (commented). Uncomment one block and replace the deploy job above.
+  # Set secrets in CircleCI: Project Settings -> Environment Variables (never commit them).
+
+  # Example 1: Docker build and push to a registry (needs Dockerfile in repo root).
+  # Secrets: DOCKER_USER, DOCKER_PASS, IMAGE_NAME
+  # deploy:
+  #   docker:
+  #     - image: cimg/base:stable
+  #   steps:
+  #     - checkout
+  #     - setup_remote_docker:
+  #         version: default
+  #     - run:
+  #         name: Build and push image
+  #         command: |
+  #           echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+  #           docker build -t "$IMAGE_NAME:$CIRCLE_SHA1" .
+  #           docker push "$IMAGE_NAME:$CIRCLE_SHA1"
+  #           echo "Deployed image $IMAGE_NAME:$CIRCLE_SHA1"
+
+  # Example 2: Static site to AWS S3 + CloudFront (needs ./dist from a build step).
+  # Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME, CLOUDFRONT_ID
+  # deploy:
+  #   docker:
+  #     - image: cimg/python:3.11
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         name: Install AWS CLI
+  #         command: pip install awscli
+  #     - run:
+  #         name: Sync to S3
+  #         command: |
+  #           aws s3 sync ./dist s3://$S3_BUCKET_NAME/ --delete
+  #           aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"
 
 workflows:
-  build_and_test:
+  ci_cd_pipeline:
     jobs:
       - build
       - test:
           requires:
             - build
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: main
