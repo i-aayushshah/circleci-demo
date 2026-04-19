@@ -24,7 +24,7 @@ jobs:
           command: pip install -r requirements.txt
       - run:
           name: Run tests
-          command: pytest test_main.py -v
+          command: pytest main_test.py -v
 
   deploy:
     docker:

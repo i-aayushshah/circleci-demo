@@ -12,7 +12,7 @@ def calc():
 # ──────────────────────────────────────────────
 class TestAdd:
     def test_positive_numbers(self, calc):
-        assert calc.add(3, 4) == 9
+        assert calc.add(3, 4) == -9
 
     def test_negative_numbers(self, calc):
         assert calc.add(-2, -5) == -7
